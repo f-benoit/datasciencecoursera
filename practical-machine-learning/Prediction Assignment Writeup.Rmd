@@ -1,0 +1,153 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+title: "Prediction Assignment Writeup"
+author: "Benoit Fedit"
+date: "16 August 2017"
+output: html_document
+---
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data
+
+The training data for this project are available here:
+[pml-training.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+
+The test data are available here:
+[pml-testing.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+
+## What you should submit
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+```{r , include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load library & read files
+
+
+```{r , include=TRUE}
+library(ggplot2)
+library(dplyr)
+library(caret)
+library(gridExtra)
+library(data.table)
+library(randomForest)
+setwd("H:/Data Science Johns Hopkins/practical-machine-learning/Week4")
+training <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+cbind(training=dim(training),testing=dim(testing))
+```
+
+There are 160 columns in each set however they are probably some columns that are not relevant for our analysis.
+
+
+## Data Cleaning
+
+The maximum missing values ratio I dediced to allow is 25% so all columns with more than 25% missing values will be removed.
+We'll aslo remove the first 7 columns as they are irelevant for our analysis.
+
+```{r , include=TRUE}
+# drop columns with at least 25% missing values
+training<-training[, which(colMeans(is.na(training)) < 0.25)]
+testing <- testing[, which(colMeans(is.na(testing)) < 0.25)]
+# remove the first 7 columns
+training<-training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+cbind(training=dim(training),testing=dim(testing))
+```
+As expected there were quite a few columns with too many NA values and other columns not usefull.
+
+## Distribution of the outcome variable
+```{r , include=TRUE}
+
+ggplot(data=training,aes(x=classe, fill=classe)) + geom_bar() +theme_minimal()+
+geom_text(stat="count",aes(label=..count..), vjust=1.6, color="white", size=3.5)+
+theme(plot.title = element_text(hjust = 0.5))+
+ggtitle("Frequence of the outcome variable Classe")
+```
+
+## Is there any colinear variables?
+```{r , include=TRUE}
+# exclude the outcome column and non numeric columns
+M<-abs(cor(training[, -which(colnames(training)=="classe") & sapply(training, class) == "numeric" ]))
+diag(M)<-0
+which(M>0.8,arr.ind = T)
+```
+As we can see there are a dozen of variables highly corelated to each other ( coef > 0.8) so it seems a good idea to reduce the number of columns to run our model faster and also to avoid over fitting.
+
+## Data PArtitioning
+```{r , include=TRUE}
+inTrain <- createDataPartition(y = training$classe, p = 3/4, list = FALSE)
+subTraining <- training[inTrain,]
+subTesting <- training[-inTrain,]
+```
+
+## PCA - Components Selection
+```{r , include=TRUE}
+prComp <- prcomp(subTraining[, -which(colnames(subTraining)=="classe")])
+summary(prComp)
+
+```
+
+Keeping the first 15 components seems reasonable as it preserves 98.5% variance and should allow the random forest
+model to run fast enough.
+
+## PCA Implementation
+```{r , include=TRUE}
+# perform PCA extraction on the new training and testing sets
+preProc <- preProcess(subTraining[,-which(colnames(subTraining)=="classe")], method="pca", pcaComp=15)
+trainPC <- predict(preProc, subTraining[,-which(colnames(subTraining)=="classe")])
+testPC  <- predict(preProc,  subTesting)
+``` 
+
+
+## Random Forest with PCA
+```{r , include=TRUE}
+train_control<- trainControl(method="cv", number=10)
+# I was thinking to use cross validation using nfolds for my rf model but 
+# as rf randomizes the variable selection during each tree split it's not prone to # overfit unlike other models
+# compute the model with pca predictors
+rfPCA<-randomForest(subTraining$classe~.,data=trainPC,method="rf")
+print(rfPCA)
+```
+
+
+The estimated out of sample error is around 3%.
+Let's now run our model against the subtestingset as random forest is not prone
+to over-fiting I'm expecting to have a similar result on the subtesting set.
+
+## Prediction on subtesting set
+```{r , include=TRUE}
+predRF <- predict(rfPCA, testPC)
+rsltRF <- confusionMatrix(predRF, subTesting$classe)
+rsltRF
+```
+
+As expected the overall accuracy is still around 97% we now have to run our RF model
+on the real testing set and see how it goes.
+
+## Prediction on the real testing set
+```{r , include=TRUE}
+# predict outcome classe on the real testing set
+testingPC <- predict(preProc,  testing)
+predClasse <- predict(rfPCA, testingPC, type="class")
+testing$Classe<-predClasse
+result<-data.frame(paste0( 1:nrow(testing)),testing$Classe)
+result
+#write.table(result, file = "result.csv", append = FALSE,col.names=TRUE)
+```
+
+I obtained all the classes correct with this model, I've tried only the RF model as it tends to be more accurate than any other classification trees model. 
+```{r , include=TRUE}
+x <- rmarkdown::render("Prediction Assignment Writeup.Rmd", run_pandoc = FALSE, clean = FALSE)
+knit_meta <- attr(x, "knit_meta") 
+rmarkdown::render(   input = 'Prediction_Assignment_Writeup.knit.md'    , knit_meta = knit_meta )
+```
