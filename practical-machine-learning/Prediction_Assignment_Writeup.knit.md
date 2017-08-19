@@ -3,10 +3,10 @@ output:
   pdf_document: default
   html_document: default
 ---
-title: "Prediction Assignment Writeup"
-author: "Benoit Fedit"
-date: "16 August 2017"
-output: html_document
+title: "Prediction Assignment Writeup"  
+author: "Benoit Fedit"  
+date: "16 August 2017"  
+output: html_document  
 ---
 
 ## Background
