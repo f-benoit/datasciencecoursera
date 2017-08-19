@@ -89,7 +89,7 @@ theme(plot.title = element_text(hjust = 0.5))+
 ggtitle("Frequence of the outcome variable Classe")
 ```
 
-![variable "Classe" ditribution](figure-latex/unnamed-chunk-72-1.pdf)
+![variable Classe ditribution](figure-latex/Distribution of the outcome variable.png)
 
 ## Is there any colinear variables?
 
