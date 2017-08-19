@@ -89,7 +89,7 @@ theme(plot.title = element_text(hjust = 0.5))+
 ggtitle("Frequence of the outcome variable Classe")
 ```
 
-![](Prediction_Assignment_Writeup_files/figure-latex/unnamed-chunk-72-1.pdf)<!-- --> 
+![variable "Classe" ditribution](/figure-latex/unnamed-chunk-72-1.pdf)
 
 ## Is there any colinear variables?
 
@@ -276,32 +276,10 @@ testingPC <- predict(preProc,  testing)
 predClasse <- predict(rfPCA, testingPC, type="class")
 testing$Classe<-predClasse
 result<-data.frame(paste0( 1:nrow(testing)),testing$Classe)
-result
+#result
 ```
 
-```
-##    paste0.1.nrow.testing.. testing.Classe
-## 1                        1              B
-## 2                        2              A
-## 3                        3              C
-## 4                        4              A
-## 5                        5              A
-## 6                        6              E
-## 7                        7              D
-## 8                        8              B
-## 9                        9              A
-## 10                      10              A
-## 11                      11              B
-## 12                      12              C
-## 13                      13              B
-## 14                      14              A
-## 15                      15              E
-## 16                      16              E
-## 17                      17              A
-## 18                      18              B
-## 19                      19              B
-## 20                      20              B
-```
+
 
 ```r
 #write.table(result, file = "result.csv", append = FALSE,col.names=TRUE)
