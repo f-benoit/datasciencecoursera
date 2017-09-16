@@ -1,0 +1,38 @@
+---
+title: "Week 4 - Shiny App"
+author: "Benoit Fedit"
+date: "16 September 2017"
+output: ioslides_presentation
+---
+
+
+
+## Instruction
+
+This peer assessed assignment has two parts. First, you will create a Shiny application and deploy it on Rstudio's servers. Second, you will use Slidify or Rstudio Presenter to prepare a reproducible pitch presentation about your application.
+
+
+
+## Plot a best fit line on 3 polynomial model
+**Description**   
+This application allows you to generate a 3 polynomial model with a customizable sample size 
+You can then plot a simple regression line or a more complex line going up to 10 degrees
+The aim of this app is to show the effect of complex polynomial and data size on overfitting 
+
+
+## Example of a regression Line
+```{r ,echo=TRUE}
+n <- 50
+x <- sort(runif(n, -2, 2))
+y <- 3*x^3 + 5*x^2 + 0.5*x + 20 # a 3 polynomial model
+err <- rnorm(n, sd=3)
+ye <- y + err
+df <- data.frame(x, ye)
+{plot(ye~x, df, ylab="y")
+fit <- lm(ye ~ poly(x, degree=1), data=df)
+newdat <- data.frame(x=seq(min(df$x), max(df$x),100))
+lines(newdat$x, predict(fit, newdat))
+}
+
+```
+
